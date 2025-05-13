@@ -8,38 +8,35 @@ import * as express from 'express';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Configuración CORS
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: 'http://localhost:3000', // Asegúrate que coincide con tu frontend
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Configuración para manejar archivos grandes
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  // Límites de tamaño para requests
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  // Servir archivos estáticos
+  // Archivos estáticos
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
   });
 
-  // Validación global
+  // Configuración única y completa del ValidationPipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    })
-  );
-  
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true, // ← Convierte strings a tipos correctos
+      whitelist: true,            // Elimina propiedades no decoradas en los DTOs
+      forbidNonWhitelisted: true, // Lanza error si hay propiedades no permitidas
+      transform: true,            // Convierte tipos automáticamente
       transformOptions: {
-        enableImplicitConversion: true, // ← Convierte "150.99" a 150.99
+        enableImplicitConversion: true, // Convierte strings a números/booleanos
       },
     })
   );
 
   await app.listen(4000);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

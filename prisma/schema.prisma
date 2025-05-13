@@ -1,106 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
-  output   = "./node_modules/@prisma/client"
 }
-
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Producto {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  descripcion String
-  precio      Float
-  destacado   Boolean  @default(false)
-  imagen      String?  // Nuevo campo para la ruta de la imagen
-  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
-  categoriaId Int?
-
-  // Relación con CarritoItem
-  carritoItems  CarritoItem[]  @relation("CarritoItemProducto")
-  
-  // Relación con DetallePedido
-  detallePedidos DetallePedido[] @relation("DetallePedidoProducto")
-}
-
-model Categoria {
-  id         Int        @id @default(autoincrement())
-  nombre     String     @unique
-  productos  Producto[] 
-}
-
-model Usuario {
-  id            Int       @id @default(autoincrement())
-  nombre        String
-  email         String    @unique
-  password      String
-  telefono      String?
-  direccion     String?
-  localidad     String?
-  rol           Rol       @default(CLIENTE)
-  carrito       Carrito?
-  pedidos       Pedido[]
-  creadoEn      DateTime  @default(now())
-  actualizadoEn DateTime  @updatedAt
-}
-
+// Añade este enum al principio o final del archivo
 enum Rol {
   CLIENTE
   ADMIN
 }
 
+model Producto {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  precio      Float
+  stock       Int      @default(0)
+  imagenUrl   String?
+  destacado   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  categoriaId Int
+
+  // Relaciones
+  carritoItems   CarritoItem[]   @relation("CarritoItemProducto")
+  detallePedidos DetallePedido[] @relation("DetallePedidoProducto")
+  categoria      Categoria       @relation(fields: [categoriaId], references: [id])
+}
+
+model Categoria {
+  id          Int        @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  productos   Producto[]
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  apellido  String
+  email     String   @unique
+  password  String
+  direccion String?
+  telefono  String?
+  rol       Rol      @default(CLIENTE)  // Ahora usa el enum definido
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  carritos Carrito[]
+  pedidos  Pedido[]
+}
+
 model Carrito {
-  id         Int            @id @default(autoincrement())
-  usuario    Usuario        @relation(fields: [usuarioId], references: [id])
-  usuarioId  Int            @unique
-  items      CarritoItem[]
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  usuario      Usuario       @relation(fields: [usuarioId], references: [id])
+  carritoItems CarritoItem[]
 }
 
 model CarritoItem {
-  id         Int       @id @default(autoincrement())
-  carrito    Carrito   @relation(fields: [carritoId], references: [id])
-  carritoId  Int
-  producto   Producto  @relation("CarritoItemProducto", fields: [productoId], references: [id])
-  productoId Int
+  id         Int      @id @default(autoincrement())
   cantidad   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  carritoId  Int
+  productoId Int
+
+  // Relaciones
+  carrito  Carrito  @relation(fields: [carritoId], references: [id])
+  producto Producto @relation("CarritoItemProducto", fields: [productoId], references: [id])
 }
 
 model Pedido {
-  id            Int              @id @default(autoincrement())
-  usuario       Usuario          @relation(fields: [usuarioId], references: [id])
-  usuarioId     Int
-  fecha         DateTime         @default(now())
-  estado        EstadoPedido     @default(PENDIENTE)
-  total         Float
-  metodoPago    MetodoPago
-  retiro        Boolean
-  direccion     String?
-  detalle       DetallePedido[]
+  id           Int       @id @default(autoincrement())
+  usuarioId    Int
+  estado       String    @default("pendiente")
+  fechaPedido  DateTime  @default(now())
+  fechaEntrega DateTime?
+  total        Float
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relaciones
+  usuario        Usuario         @relation(fields: [usuarioId], references: [id])
+  detallePedidos DetallePedido[]
 }
 
 model DetallePedido {
-  id         Int       @id @default(autoincrement())
-  pedido     Pedido    @relation(fields: [pedidoId], references: [id])
-  pedidoId   Int
-  producto   Producto  @relation("DetallePedidoProducto", fields: [productoId], references: [id])
-  productoId Int
-  cantidad   Int
-  precio     Float
-}
+  id             Int      @id @default(autoincrement())
+  cantidad       Int
+  precioUnitario Float
+  subtotal       Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  pedidoId       Int
+  productoId     Int
 
-enum EstadoPedido {
-  PENDIENTE
-  CONFIRMADO
-  ENVIADO
-  ENTREGADO
-  CANCELADO
-}
-
-enum MetodoPago {
-  MERCADO_PAGO
-  TARJETA
-  EFECTIVO
+  // Relaciones
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id])
+  producto Producto @relation("DetallePedidoProducto", fields: [productoId], references: [id])
 }
